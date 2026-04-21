@@ -1,0 +1,31 @@
+# Virtual Environments
+.venv/
+yolov8_env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# IDEs / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# YOLO Runs & Weights
+runs/
+*.pt
+
+# Dataset (too large for GitHub)
+dataset/
+scratch/
+
+# Output Images/Videos
+output_test_image.jpg
+*.mp4
+*.avi
+*.jpg
+*.jpeg
+*.png
+!dataset/data.yaml
