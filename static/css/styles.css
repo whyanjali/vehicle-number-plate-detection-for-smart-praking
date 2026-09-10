@@ -1,0 +1,304 @@
+:root {
+    --bg-surface: #0b0f19;
+    --bg-card: #131a29;
+    --bg-card-hover: #1b2438;
+    --bg-card-soft: #172134;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-accent: rgba(59, 130, 246, 0.3);
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --color-primary: #3b82f6;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-ev: #06b6d4;
+    --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-surface);
+    color: var(--text-main);
+    font-family: var(--font-family);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-wrapper {
+    flex: 1;
+}
+
+/* Glassmorphism & Cards */
+.glass-card {
+    background: rgba(19, 26, 41, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 1rem;
+}
+
+.bg-dark-glass {
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(12px);
+}
+
+.bg-dark-card {
+    background-color: var(--bg-card);
+}
+
+.bg-dark-soft {
+    background-color: var(--bg-card-soft);
+}
+
+.bg-input {
+    background-color: #0d1320 !important;
+    color: #f3f4f6 !important;
+}
+
+.border-input {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.border-subtle {
+    border-color: var(--border-subtle) !important;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.tracking-tight {
+    letter-spacing: -0.025em;
+}
+
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+/* Custom Nav Tabs */
+.nav-tabs-modern .nav-link {
+    color: var(--text-muted);
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-tabs-modern .nav-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-tabs-modern .nav-link.active {
+    color: #ffffff;
+    background: rgba(59, 130, 246, 0.08);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+/* Stat Cards */
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.85rem;
+    padding: 1.25rem;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.stat-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Visual Parking Bay Grid */
+.parking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 0.85rem;
+}
+
+.bay-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border-subtle);
+    border-radius: 0.75rem;
+    padding: 0.85rem 0.65rem;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 140px;
+}
+
+.bay-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Vacant Slot */
+.bay-card.bay-vacant {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.06) 0%, rgba(19, 26, 41, 0.9) 100%);
+}
+
+.bay-card.bay-vacant:hover {
+    border-color: var(--color-success);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+}
+
+.bay-card.bay-vacant .bay-status-dot {
+    background-color: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success);
+}
+
+/* Occupied Slot */
+.bay-card.bay-occupied {
+    border-color: rgba(239, 68, 68, 0.45);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(19, 26, 41, 0.95) 100%);
+}
+
+.bay-card.bay-occupied:hover {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+.bay-card.bay-occupied .bay-status-dot {
+    background-color: var(--color-danger);
+    box-shadow: 0 0 8px var(--color-danger);
+}
+
+.bay-slot-number {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.bay-plate-pill {
+    background: #000000;
+    color: #fbbf24;
+    font-family: monospace;
+    font-weight: 700;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid #fbbf24;
+    font-size: 0.75rem;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+/* Camera & Scanner Card */
+.scanner-viewport {
+    background: #000000;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 16/10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-subtle);
+}
+
+.scanner-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scanner-reticle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 60%;
+    border: 2px dashed rgba(59, 130, 246, 0.7);
+    border-radius: 8px;
+    pointer-events: none;
+    box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+/* Digital Parking Pass Ticket */
+.ticket-card {
+    background: #ffffff;
+    color: #111827;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+    position: relative;
+}
+
+.ticket-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: #ffffff;
+    padding: 1.25rem;
+}
+
+.ticket-notch-left, .ticket-notch-right {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: var(--bg-surface);
+    border-radius: 50%;
+    top: 60%;
+}
+
+.ticket-notch-left { left: -12px; }
+.ticket-notch-right { right: -12px; }
+
+.ticket-barcode {
+    height: 42px;
+    background: repeating-linear-gradient(
+        90deg,
+        #111827,
+        #111827 2px,
+        transparent 2px,
+        transparent 4px,
+        #111827 4px,
+        #111827 7px,
+        transparent 7px,
+        transparent 9px
+    );
+    width: 100%;
+    border-radius: 4px;
+}
+
+/* Glowing Elements */
+.bg-primary-glow {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0) 70%);
+}
+
+.btn-danger-soft {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger-soft:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #ffffff;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+    background: #1f293d;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+}

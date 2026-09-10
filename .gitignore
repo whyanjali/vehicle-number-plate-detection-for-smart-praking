@@ -28,4 +28,8 @@ output_test_image.jpg
 *.jpg
 *.jpeg
 *.png
+# Database
+*.db
+*.sqlite3
+
 !dataset/data.yaml

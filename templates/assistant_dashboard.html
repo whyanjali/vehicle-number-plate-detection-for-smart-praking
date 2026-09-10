@@ -1,0 +1,828 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Assistant Operations Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- Top Banner -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold text-white mb-0">Parking Assistant Console</h2>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                    <i class="fa-solid fa-signal me-1"></i> ALPR System Online
+                </span>
+            </div>
+            <p class="text-secondary small mb-0">
+                Gate 1 Inbound & Outbound Management &bull; Attendant: <span class="text-light fw-semibold">{{ user.full_name }}</span>
+            </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-light btn-sm d-flex align-items-center gap-1.5" onclick="refreshDashboard()">
+                <i class="fa-solid fa-arrows-rotate" id="refreshIcon"></i>
+                <span>Refresh Status</span>
+            </button>
+            <button class="btn btn-primary btn-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#manualAllotModal">
+                <i class="fa-solid fa-plus"></i>
+                <span>Manual Slot Allotment</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4" id="statsRow">
+        <div class="col-6 col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-primary-subtle text-primary fs-4">
+                    <i class="fa-solid fa-square-parking"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-secondary text-uppercase fw-bold">Total Bays</div>
+                    <div class="fs-3 fw-bold text-white" id="statTotalSlots">16</div>
+                    <div class="text-xs text-secondary">Capacity</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3 border-success-subtle">
+                <div class="stat-icon-wrapper bg-success-subtle text-success fs-4">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-success text-uppercase fw-bold">Vacant Bays</div>
+                    <div class="fs-3 fw-bold text-success" id="statVacantSlots">--</div>
+                    <div class="text-xs text-secondary">Ready to allot</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3 border-danger-subtle">
+                <div class="stat-icon-wrapper bg-danger-subtle text-danger fs-4">
+                    <i class="fa-solid fa-car"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-danger text-uppercase fw-bold">Occupied</div>
+                    <div class="fs-3 fw-bold text-white" id="statOccupiedSlots">--</div>
+                    <div class="text-xs text-secondary"><span id="statOccupancyRate">0</span>% Occupancy</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-warning-subtle text-warning fs-4">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-warning text-uppercase fw-bold">Today's Revenue</div>
+                    <div class="fs-3 fw-bold text-warning">₹<span id="statRevenue">0</span></div>
+                    <div class="text-xs text-secondary"><span id="statCheckouts">0</span> checkouts</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace (Scanner & Parking Bay Grid) -->
+    <div class="row g-4 mb-4">
+        
+        <!-- LEFT COLUMN: ALPR Vehicle Scanner & Auto-Allotment -->
+        <div class="col-xl-5">
+            <div class="glass-card h-100 p-4">
+                <div class="d-flex align-items-center justify-content-between pb-3 border-bottom border-subtle mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-camera text-primary fs-5"></i>
+                        <h5 class="fw-bold text-white mb-0">Inbound Vehicle ALPR Scanner</h5>
+                    </div>
+                    <span class="badge bg-primary text-xs">YOLOv8 + OCR</span>
+                </div>
+
+                <!-- Input Method Tabs -->
+                <ul class="nav nav-pills nav-fill mb-3 bg-dark-soft p-1 rounded-3 border border-subtle small" id="scannerTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active py-1.5" id="webcam-tab" data-bs-toggle="pill" data-bs-target="#webcam-pane" type="button">
+                            <i class="fa-solid fa-video me-1"></i> Live Camera
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link py-1.5" id="upload-tab" data-bs-toggle="pill" data-bs-target="#upload-pane" type="button">
+                            <i class="fa-solid fa-cloud-arrow-up me-1"></i> Upload Photo
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link py-1.5" id="samples-tab" data-bs-toggle="pill" data-bs-target="#samples-pane" type="button">
+                            <i class="fa-solid fa-images me-1"></i> Test Presets
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mb-3" id="scannerTabsContent">
+                    
+                    <!-- TAB 1: Live Webcam -->
+                    <div class="tab-pane fade show active" id="webcam-pane">
+                        <div class="scanner-viewport mb-3">
+                            <video id="webcamVideo" class="scanner-video" autoplay playsinline muted></video>
+                            <div class="scanner-reticle" id="scannerReticle"></div>
+                            <div id="cameraPlaceholder" class="position-absolute text-center p-3">
+                                <i class="fa-solid fa-camera-rotate fs-1 text-secondary mb-2"></i>
+                                <div class="small text-secondary">Camera is inactive. Click below to start video feed.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button id="btnStartCamera" class="btn btn-outline-primary btn-sm flex-fill" onclick="toggleWebcam()">
+                                <i class="fa-solid fa-power-off me-1"></i> <span id="cameraBtnText">Start Camera</span>
+                            </button>
+                            <button id="btnSnapPlate" class="btn btn-primary btn-sm flex-fill fw-bold" onclick="captureAndScan()" disabled>
+                                <i class="fa-solid fa-expand me-1"></i> Snap & Detect Plate
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Image Upload -->
+                    <div class="tab-pane fade" id="upload-pane">
+                        <div class="p-4 border-2 border-dashed border-subtle rounded-3 text-center bg-dark-soft mb-3"
+                             id="dropzone" style="border-style: dashed; cursor: pointer;" onclick="document.getElementById('vehicleFileInput').click()">
+                            <input type="file" id="vehicleFileInput" accept="image/*" class="d-none" onchange="handleFileSelect(event)">
+                            <i class="fa-solid fa-image text-primary fs-2 mb-2"></i>
+                            <div class="fw-semibold text-white small">Click to upload vehicle photo</div>
+                            <div class="text-xs text-secondary mt-1">Supports JPG, PNG (car front or rear)</div>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100 fw-bold" id="btnUploadScan" onclick="uploadAndScan()" disabled>
+                            <i class="fa-solid fa-magnifying-glass me-1"></i> Run ALPR Recognition
+                        </button>
+                    </div>
+
+                    <!-- TAB 3: Dataset Sample Images -->
+                    <div class="tab-pane fade" id="samples-pane">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-semibold">Select Test Vehicle from Project Dataset:</label>
+                            <select id="sampleImageSelect" class="form-select form-select-sm bg-input border-input text-white" onchange="previewSampleImage()">
+                                <option value="">-- Choose a test image --</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="scanSelectedSample()">
+                            <i class="fa-solid fa-bolt me-1"></i> Scan Selected Test Image
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Recognition Result Panel -->
+                <div id="recognitionResultCard" class="p-3 rounded-3 bg-dark-soft border border-subtle mt-3" style="display: none;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-success text-xs"><i class="fa-solid fa-check me-1"></i> Detection Success</span>
+                        <span class="text-xs text-secondary" id="recConfidence">Conf: 95%</span>
+                    </div>
+
+                    <div class="row g-2 align-items-center mb-3">
+                        <div class="col-5">
+                            <img id="recPreviewImg" src="" alt="Annotated vehicle" class="img-fluid rounded border border-subtle shadow-sm" style="max-height: 110px; width: 100%; object-fit: cover;">
+                        </div>
+                        <div class="col-7">
+                            <div class="text-xs text-secondary text-uppercase fw-semibold">Detected Plate</div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <input type="text" id="recPlateNumber" class="form-control form-control-sm bg-dark text-warning fw-bold font-monospace fs-6 text-uppercase" style="letter-spacing: 1px;">
+                            </div>
+                            <div class="text-xs text-secondary">
+                                Vehicle: <span id="recVehicleType" class="text-light fw-semibold">Car</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Allotment Action -->
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success btn-sm flex-fill fw-bold py-2 d-flex align-items-center justify-content-center gap-1.5" onclick="allotDetectedVehicle()">
+                            <i class="fa-solid fa-check-to-slot"></i>
+                            <span>Allot Nearest Vacant Bay</span>
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="clearDetection()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Processing Spinner -->
+                <div id="scannerLoading" class="text-center py-4" style="display: none;">
+                    <div class="spinner-border text-primary spinner-border-sm mb-2" role="status"></div>
+                    <div class="small text-secondary">Running YOLOv8 vehicle & plate detection...</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: 2D Interactive Parking Bay Map -->
+        <div class="col-xl-7">
+            <div class="glass-card h-100 p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom border-subtle mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot text-success fs-5"></i>
+                        <h5 class="fw-bold text-white mb-0">Live Parking Bay Visual Grid</h5>
+                    </div>
+                    
+                    <!-- Section Filter Buttons -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active btn-filter" data-section="all" onclick="filterBays('all', this)">All</button>
+                        <button type="button" class="btn btn-outline-secondary btn-filter" data-section="Section A (Ground)" onclick="filterBays('Section A (Ground)', this)">Sec A</button>
+                        <button type="button" class="btn btn-outline-secondary btn-filter" data-section="Section B (Level 1)" onclick="filterBays('Section B (Level 1)', this)">Sec B</button>
+                        <button type="button" class="btn btn-outline-secondary btn-filter" data-section="Section C (EV Priority)" onclick="filterBays('Section C (EV Priority)', this)">Sec C (EV)</button>
+                    </div>
+                </div>
+
+                <!-- Map Legend -->
+                <div class="d-flex align-items-center gap-4 text-xs text-secondary mb-3">
+                    <span class="d-flex align-items-center gap-1.5">
+                        <span class="d-inline-block rounded-circle bg-success" style="width: 10px; height: 10px;"></span>
+                        <span>Vacant (Click to Allot)</span>
+                    </span>
+                    <span class="d-flex align-items-center gap-1.5">
+                        <span class="d-inline-block rounded-circle bg-danger" style="width: 10px; height: 10px;"></span>
+                        <span>Occupied (Click to Checkout)</span>
+                    </span>
+                    <span class="d-flex align-items-center gap-1.5">
+                        <span class="d-inline-block rounded-circle bg-info" style="width: 10px; height: 10px;"></span>
+                        <span>EV Bay</span>
+                    </span>
+                </div>
+
+                <!-- Parking Grid Container -->
+                <div class="parking-grid" id="parkingBayGrid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Active Parked Vehicles Table -->
+    <div class="glass-card p-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 border-bottom border-subtle mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-list-check text-warning fs-5"></i>
+                <h5 class="fw-bold text-white mb-0">Active Parked Vehicles</h5>
+                <span class="badge bg-secondary rounded-pill" id="activeVehiclesCount">0</span>
+            </div>
+            <div class="input-group input-group-sm" style="max-width: 260px;">
+                <span class="input-group-text bg-input border-input text-secondary"><i class="fa-solid fa-search"></i></span>
+                <input type="text" id="tableSearchInput" class="form-control bg-input border-input text-light" placeholder="Search plate or bay..." onkeyup="filterTable()">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" id="activeVehiclesTable">
+                <thead>
+                    <tr class="text-secondary small text-uppercase">
+                        <th>Bay #</th>
+                        <th>Plate Number</th>
+                        <th>Vehicle Type</th>
+                        <th>Entry Timestamp</th>
+                        <th>Duration</th>
+                        <th>Est. Fee</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activeVehiclesTbody">
+                    <!-- Dynamic rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: Manual Slot Allotment -->
+<div class="modal fade" id="manualAllotModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border border-subtle shadow-xl">
+            <div class="modal-header border-subtle">
+                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-square-plus text-primary me-2"></i>Manual Slot Allotment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manualAllotForm">
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">License Plate Number</label>
+                        <input type="text" id="manualPlateInput" class="form-control bg-input border-input text-light text-uppercase font-monospace" required placeholder="e.g., DL3CAB1234">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">Target Bay (Optional - leaves empty for auto-assign)</label>
+                        <select id="manualSlotSelect" class="form-select bg-input border-input text-light">
+                            <option value="">Auto-Assign Optimal Vacant Bay</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">Vehicle Type</label>
+                        <select id="manualVehicleType" class="form-select bg-input border-input text-light">
+                            <option value="Car">Car</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Motorcycle">Motorcycle</option>
+                            <option value="Bus">Bus</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-subtle">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold px-3" onclick="submitManualAllot()">Confirm Allotment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Checkout Receipt & Billing -->
+<div class="modal fade" id="checkoutReceiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border border-subtle shadow-xl">
+            <div class="modal-header border-subtle">
+                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-receipt text-warning me-2"></i>Parking Bill & Exit Pass</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="ticket-card p-4 mx-auto" style="max-width: 360px;">
+                    <div class="text-center pb-3 border-bottom border-dark border-dashed">
+                        <h5 class="fw-bold text-dark mb-0">SMARTPARK ASSISTANT</h5>
+                        <div class="text-xs text-secondary">Gate 1 Outbound Terminal</div>
+                    </div>
+
+                    <div class="py-3 text-dark small">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Ticket Ref:</span>
+                            <span class="fw-bold font-monospace" id="receiptTicketId">TKT-000</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Vehicle Plate:</span>
+                            <span class="fw-bold font-monospace fs-6" id="receiptPlate">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Bay Released:</span>
+                            <span class="fw-bold text-primary" id="receiptSlot">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Entry Time:</span>
+                            <span id="receiptEntry">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Exit Time:</span>
+                            <span id="receiptExit">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Total Duration:</span>
+                            <span class="fw-bold" id="receiptDuration">--</span>
+                        </div>
+                    </div>
+
+                    <div class="py-3 border-top border-bottom border-dark border-dashed text-dark text-center">
+                        <div class="text-xs text-muted text-uppercase">Total Amount Due</div>
+                        <div class="display-6 fw-bold text-success">₹<span id="receiptFee">0</span></div>
+                        <div class="text-xs text-muted">(Rate: ₹30/hour)</div>
+                    </div>
+
+                    <div class="pt-3 text-center">
+                        <div class="ticket-barcode mb-2"></div>
+                        <div class="text-xs text-muted">THANK YOU FOR PARKING WITH US</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-subtle">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i> Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let cameraManager = null;
+let currentBays = [];
+let activeFilter = 'all';
+let selectedFile = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    cameraManager = new CameraManager('webcamVideo');
+    loadSampleImages();
+    refreshDashboard();
+
+    // Auto-refresh every 10 seconds
+    setInterval(refreshDashboard, 10000);
+});
+
+// Refresh Dashboard Stats, Slots, and Active Table
+async function refreshDashboard() {
+    const icon = document.getElementById('refreshIcon');
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        const [slotsRes, statsRes] = await Promise.all([
+            fetch('/api/slots'),
+            fetch('/api/stats')
+        ]);
+        
+        const slotsData = await slotsRes.json();
+        const statsData = await statsRes.json();
+
+        if (slotsData.success) {
+            currentBays = slotsData.slots;
+            renderParkingGrid(currentBays);
+            populateSlotDropdowns(currentBays);
+        }
+
+        if (statsData.success) {
+            updateStatsUI(statsData.stats);
+        }
+    } catch (err) {
+        console.error("Dashboard refresh error:", err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+function updateStatsUI(stats) {
+    document.getElementById('statTotalSlots').innerText = stats.total_slots;
+    document.getElementById('statVacantSlots').innerText = stats.vacant_slots;
+    document.getElementById('statOccupiedSlots').innerText = stats.occupied_slots;
+    document.getElementById('statOccupancyRate').innerText = stats.occupancy_rate;
+    document.getElementById('statRevenue').innerText = stats.today_revenue;
+    document.getElementById('statCheckouts').innerText = stats.today_checkouts;
+    document.getElementById('activeVehiclesCount').innerText = stats.active_vehicles.length;
+
+    renderActiveVehiclesTable(stats.active_vehicles);
+}
+
+// Render 2D Parking Bay Map
+function renderParkingGrid(slots) {
+    const container = document.getElementById('parkingBayGrid');
+    if (!container) return;
+
+    const filtered = activeFilter === 'all' ? slots : slots.filter(s => s.section === activeFilter);
+    container.innerHTML = '';
+
+    filtered.forEach(slot => {
+        const isOcc = slot.is_occupied === 1;
+        const isEV = slot.slot_type === 'EV';
+        
+        const card = document.createElement('div');
+        card.className = `bay-card ${isOcc ? 'bay-occupied' : 'bay-vacant'}`;
+
+        let iconClass = 'fa-car';
+        if (isEV) iconClass = 'fa-bolt';
+        else if (slot.vehicle_type === 'SUV') iconClass = 'fa-truck-pickup';
+        else if (slot.vehicle_type === 'Motorcycle') iconClass = 'fa-motorcycle';
+
+        card.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="bay-slot-number ${isOcc ? 'text-danger' : 'text-success'}">${slot.slot_number}</span>
+                <div class="d-flex align-items-center gap-1">
+                    ${isEV ? '<span class="badge bg-info text-dark text-xs py-0.5 px-1">EV</span>' : ''}
+                    <span class="bay-status-dot rounded-circle" style="width: 8px; height: 8px;"></span>
+                </div>
+            </div>
+
+            <div class="text-center my-auto">
+                <i class="fa-solid ${iconClass} fs-2 ${isOcc ? 'text-danger' : 'text-success opacity-50'} mb-1"></i>
+                ${isOcc ? `
+                    <div class="bay-plate-pill mt-1">${slot.current_plate}</div>
+                ` : `
+                    <div class="text-xs text-success fw-bold text-uppercase mt-1">VACANT</div>
+                `}
+            </div>
+
+            <div class="mt-2 pt-2 border-top border-subtle text-center">
+                ${isOcc ? `
+                    <button class="btn btn-danger-soft btn-sm text-xs py-0.5 px-2 w-100 fw-bold" onclick="event.stopPropagation(); checkoutSlot('${slot.slot_number}')">
+                        Checkout
+                    </button>
+                ` : `
+                    <button class="btn btn-outline-success btn-sm text-xs py-0.5 px-2 w-100 fw-bold" onclick="event.stopPropagation(); openAllotForSlot('${slot.slot_number}')">
+                        Allot
+                    </button>
+                `}
+            </div>
+        `;
+
+        card.onclick = () => {
+            if (isOcc) {
+                checkoutSlot(slot.slot_number);
+            } else {
+                openAllotForSlot(slot.slot_number);
+            }
+        };
+
+        container.appendChild(card);
+    });
+}
+
+function filterBays(section, btn) {
+    activeFilter = section;
+    document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderParkingGrid(currentBays);
+}
+
+function populateSlotDropdowns(slots) {
+    const select = document.getElementById('manualSlotSelect');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">Auto-Assign Optimal Vacant Bay</option>';
+
+    slots.filter(s => s.is_occupied === 0).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.slot_number;
+        opt.innerText = `${s.slot_number} (${s.section} - ${s.slot_type})`;
+        select.appendChild(opt);
+    });
+
+    if (currentVal) select.value = currentVal;
+}
+
+// Render Active Vehicles Table
+function renderActiveVehiclesTable(vehicles) {
+    const tbody = document.getElementById('activeVehiclesTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!vehicles || vehicles.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-3">No vehicles currently parked.</td></tr>`;
+        return;
+    }
+
+    const now = new Date();
+
+    vehicles.forEach(v => {
+        let durationStr = 'N/A';
+        let estFee = 30;
+        if (v.entry_time) {
+            const entryDt = new Date(v.entry_time.replace(' ', 'T'));
+            const diffMins = Math.max(1, Math.floor((now - entryDt) / (1000 * 60)));
+            durationStr = formatDuration(diffMins);
+            const hours = Math.max(1, Math.ceil(diffMins / 60));
+            estFee = hours * 30;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="badge bg-primary-subtle text-primary fw-bold font-monospace">${v.slot_number}</span></td>
+            <td><span class="font-monospace fw-bold text-warning">${v.current_plate}</span></td>
+            <td><span class="text-light">${v.vehicle_type || 'Car'}</span></td>
+            <td class="text-secondary small">${v.entry_time || '--'}</td>
+            <td><span class="badge bg-dark border border-subtle text-light">${durationStr}</span></td>
+            <td class="fw-bold text-success">₹${estFee}</td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-danger-soft text-danger fw-bold py-1 px-2.5" onclick="checkoutSlot('${v.slot_number}')">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Checkout
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filterTable() {
+    const q = document.getElementById('tableSearchInput').value.toUpperCase();
+    const rows = document.querySelectorAll('#activeVehiclesTbody tr');
+    rows.forEach(row => {
+        const text = row.innerText.toUpperCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+// Webcam Controls
+async function toggleWebcam() {
+    const btnText = document.getElementById('cameraBtnText');
+    const snapBtn = document.getElementById('btnSnapPlate');
+    const placeholder = document.getElementById('cameraPlaceholder');
+
+    if (!cameraManager.isActive) {
+        const ok = await cameraManager.start();
+        if (ok) {
+            btnText.innerText = 'Stop Camera';
+            snapBtn.disabled = false;
+            placeholder.style.display = 'none';
+            showToast('Webcam started.', 'success');
+        } else {
+            showToast('Could not access webcam. Please check device permissions.', 'danger');
+        }
+    } else {
+        cameraManager.stop();
+        btnText.innerText = 'Start Camera';
+        snapBtn.disabled = true;
+        placeholder.style.display = 'block';
+    }
+}
+
+async function captureAndScan() {
+    const b64 = cameraManager.captureBlob();
+    if (!b64) {
+        showToast('Failed to capture frame from webcam.', 'warning');
+        return;
+    }
+    await processALPR({ image_b64: b64 });
+}
+
+// File Upload Handler
+function handleFileSelect(e) {
+    if (e.target.files && e.target.files[0]) {
+        selectedFile = e.target.files[0];
+        document.getElementById('btnUploadScan').disabled = false;
+        showToast(`Selected file: ${selectedFile.name}`, 'info');
+    }
+}
+
+async function uploadAndScan() {
+    if (!selectedFile) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        await processALPR({ image_b64: e.target.result });
+    };
+    reader.readAsDataURL(selectedFile);
+}
+
+// Sample Images Handler
+async function loadSampleImages() {
+    try {
+        const res = await fetch('/api/sample_images');
+        const data = await res.json();
+        const sel = document.getElementById('sampleImageSelect');
+        if (sel && data.samples) {
+            data.samples.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.innerText = s.length > 40 ? s.substring(0, 37) + '...' : s;
+                sel.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.warn("Could not load sample images:", err);
+    }
+}
+
+async function scanSelectedSample() {
+    const sel = document.getElementById('sampleImageSelect');
+    if (!sel || !sel.value) {
+        showToast('Please select a test image from the dropdown.', 'warning');
+        return;
+    }
+    await processALPR({ sample_name: sel.value });
+}
+
+// Process ALPR Request
+async function processALPR(payload) {
+    const loading = document.getElementById('scannerLoading');
+    const resultCard = document.getElementById('recognitionResultCard');
+
+    loading.style.display = 'block';
+    resultCard.style.display = 'none';
+
+    try {
+        const res = await fetch('/api/capture_plate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        loading.style.display = 'none';
+
+        if (data.success && data.result) {
+            const r = data.result;
+            resultCard.style.display = 'block';
+            document.getElementById('recPreviewImg').src = r.annotated_image || '';
+            document.getElementById('recPlateNumber').value = r.plate_number || 'UNKNOWN';
+            document.getElementById('recVehicleType').innerText = r.vehicle_type || 'Car';
+            document.getElementById('recConfidence').innerText = `Conf: ${Math.round(r.confidence * 100)}%`;
+
+            if (r.found) {
+                showToast(`Plate detected: ${r.plate_number}`, 'success');
+            } else {
+                showToast('Vehicle detected! Please verify the plate number.', 'warning');
+            }
+        } else {
+            showToast(data.message || 'Detection failed.', 'danger');
+        }
+    } catch (err) {
+        loading.style.display = 'none';
+        showToast('Error communicating with ALPR service.', 'danger');
+        console.error(err);
+    }
+}
+
+function clearDetection() {
+    document.getElementById('recognitionResultCard').style.display = 'none';
+}
+
+// Allot Slot Actions
+async function allotDetectedVehicle() {
+    const plate = document.getElementById('recPlateNumber').value.trim();
+    const vType = document.getElementById('recVehicleType').innerText;
+
+    if (!plate) {
+        showToast('Please specify a license plate number.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/allot_slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plate_number: plate,
+                vehicle_type: vType
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            clearDetection();
+            refreshDashboard();
+        } else {
+            showToast(data.message, 'danger');
+        }
+    } catch (err) {
+        showToast('Error allotting slot.', 'danger');
+    }
+}
+
+function openAllotForSlot(slotNumber) {
+    document.getElementById('manualSlotSelect').value = slotNumber;
+    const modal = new bootstrap.Modal(document.getElementById('manualAllotModal'));
+    modal.show();
+}
+
+async function submitManualAllot() {
+    const plate = document.getElementById('manualPlateInput').value.trim();
+    const slot = document.getElementById('manualSlotSelect').value;
+    const vType = document.getElementById('manualVehicleType').value;
+
+    if (!plate) {
+        showToast('License plate number is required.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/allot_slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plate_number: plate,
+                slot_number: slot || null,
+                vehicle_type: vType
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('manualAllotModal')).hide();
+            document.getElementById('manualPlateInput').value = '';
+            refreshDashboard();
+        } else {
+            showToast(data.message, 'danger');
+        }
+    } catch (err) {
+        showToast('Failed to allot slot.', 'danger');
+    }
+}
+
+// Checkout Vehicle
+async function checkoutSlot(identifier) {
+    if (!confirm(`Confirm checkout and release for Bay / Vehicle: ${identifier}?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/release_slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier })
+        });
+
+        const data = await res.json();
+        if (data.success && data.receipt) {
+            const r = data.receipt;
+            document.getElementById('receiptTicketId').innerText = r.ticket_id;
+            document.getElementById('receiptPlate').innerText = r.plate_number;
+            document.getElementById('receiptSlot').innerText = r.slot_number;
+            document.getElementById('receiptEntry').innerText = r.entry_time;
+            document.getElementById('receiptExit').innerText = r.exit_time;
+            document.getElementById('receiptDuration').innerText = formatDuration(r.duration_minutes);
+            document.getElementById('receiptFee').innerText = r.total_fee;
+
+            const modal = new bootstrap.Modal(document.getElementById('checkoutReceiptModal'));
+            modal.show();
+            refreshDashboard();
+        } else {
+            showToast(data.message || 'Checkout failed.', 'danger');
+        }
+    } catch (err) {
+        showToast('Error during checkout.', 'danger');
+    }
+}
+</script>
+{% endblock %}

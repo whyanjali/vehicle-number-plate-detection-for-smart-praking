@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Driver Portal - Smart Parking Assistant{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Driver Welcome Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-info text-dark fw-bold text-xs"><i class="fa-solid fa-car me-1"></i> Driver Portal</span>
+                <h2 class="fw-bold text-white mb-0">Welcome, {{ user.full_name }}</h2>
+            </div>
+            <p class="text-secondary small mb-0">
+                Registered Plate: <span class="font-monospace text-warning fw-bold">{{ user.vehicle_plate or 'Not set' }}</span> &bull; Smart Allotment & Digital Pass
+            </p>
+        </div>
+
+        <button class="btn btn-outline-info btn-sm d-flex align-items-center gap-1.5" onclick="checkDriverStatus()">
+            <i class="fa-solid fa-arrows-rotate" id="driverRefreshIcon"></i>
+            <span>Refresh Pass</span>
+        </button>
+    </div>
+
+    <!-- Vacancy & Facility Status Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card border-success-subtle d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-success-subtle text-success fs-3">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-success text-uppercase fw-bold">Live Vacant Bays</div>
+                    <div class="fs-2 fw-bold text-white" id="driverVacantCount">--</div>
+                    <div class="text-xs text-secondary">Spots available right now</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-primary-subtle text-primary fs-3">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-primary text-uppercase fw-bold">Section Availability</div>
+                    <div class="small text-light mt-1">
+                        <span class="me-2"><span class="badge bg-secondary">A</span> <span id="secAVacant">--</span> free</span>
+                        <span class="me-2"><span class="badge bg-secondary">B</span> <span id="secBVacant">--</span> free</span>
+                        <span><span class="badge bg-info text-dark">EV</span> <span id="secCVacant">--</span> free</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-warning-subtle text-warning fs-3">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-warning text-uppercase fw-bold">Standard Tariff</div>
+                    <div class="fs-3 fw-bold text-white">₹30 <span class="fs-6 text-secondary fw-normal">/ hour</span></div>
+                    <div class="text-xs text-secondary">24/7 CCTV & AI Monitored</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- LEFT COLUMN: ACTIVE PASS OR CHECK-IN FORM -->
+        <div class="col-lg-6">
+
+            <!-- STATE A: Active Ticket Card (Visible when vehicle is parked) -->
+            <div id="activeTicketSection" style="display: none;">
+                <div class="ticket-card p-4 mx-auto mb-4 border border-secondary shadow-2xl">
+                    <div class="ticket-header rounded-3 mb-3 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-light text-dark fw-bold text-xs mb-1">SMARTPARK DIGITAL PASS</span>
+                                <h4 class="fw-bold mb-0 text-white" id="ticketPlateDisplay">--</h4>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success border border-light py-1 px-2 text-xs">
+                                    <i class="fa-solid fa-circle-dot me-1"></i> ACTIVE
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Allotted Bay Highlight -->
+                    <div class="text-center p-3 my-2 rounded-3 bg-light border border-2 border-primary">
+                        <div class="text-xs text-muted text-uppercase fw-bold">Your Allotted Parking Bay</div>
+                        <div class="display-4 fw-extrabold text-primary my-1 font-monospace" id="ticketSlotNumber">--</div>
+                        <div class="badge bg-dark-subtle text-dark" id="ticketSectionName">Section A (Ground)</div>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div class="py-3 text-dark small">
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="text-muted">Ticket ID:</span>
+                            <span class="fw-bold font-monospace" id="ticketIdDisplay">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="text-muted">Vehicle Type:</span>
+                            <span class="fw-semibold" id="ticketVehicleType">Car</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="text-muted">Entry Timestamp:</span>
+                            <span id="ticketEntryTime">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 border-bottom">
+                            <span class="text-muted">Time Elapsed:</span>
+                            <span class="fw-bold text-danger" id="ticketElapsed">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="text-muted">Current Estimated Fee:</span>
+                            <span class="fw-bold text-success fs-6">₹<span id="ticketFee">30</span></span>
+                        </div>
+                    </div>
+
+                    <div class="ticket-barcode my-3"></div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-primary btn-sm flex-fill fw-bold" onclick="window.print()">
+                            <i class="fa-solid fa-print me-1"></i> Save Pass
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm flex-fill fw-bold" onclick="driverSelfCheckout()">
+                            <i class="fa-solid fa-door-open me-1"></i> Request Exit Pass
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATE B: Check-in / Request Slot Form (Visible when vehicle is not parked) -->
+            <div id="checkinFormSection" class="glass-card p-4">
+                <div class="d-flex align-items-center gap-2 pb-3 border-bottom border-subtle mb-3">
+                    <i class="fa-solid fa-square-parking text-info fs-4"></i>
+                    <h5 class="fw-bold text-white mb-0">Request Parking Bay Allotment</h5>
+                </div>
+
+                <p class="text-secondary small mb-3">
+                    Enter your vehicle number below to get an instant vacant parking bay allotment and gate navigation pass.
+                </p>
+
+                <form id="driverCheckinForm" onsubmit="handleDriverCheckin(event)">
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">License Plate Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-input border-input text-secondary"><i class="fa-solid fa-car"></i></span>
+                            <input type="text" id="driverPlateInput" class="form-control bg-input border-input text-warning fw-bold font-monospace text-uppercase" 
+                                   value="{{ user.vehicle_plate or 'DL3CAB1234' }}" required placeholder="e.g., DL3CAB1234">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">Vehicle Type</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="vTypeRadio" id="vTypeCar" value="Car" checked>
+                                <label class="btn btn-outline-secondary w-100 text-start py-2 text-xs" for="vTypeCar">
+                                    <i class="fa-solid fa-car me-1 text-primary"></i> Standard Car
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="vTypeRadio" id="vTypeSUV" value="SUV">
+                                <label class="btn btn-outline-secondary w-100 text-start py-2 text-xs" for="vTypeSUV">
+                                    <i class="fa-solid fa-truck-pickup me-1 text-warning"></i> SUV / 4x4
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="vTypeRadio" id="vTypeEV" value="EV">
+                                <label class="btn btn-outline-secondary w-100 text-start py-2 text-xs" for="vTypeEV">
+                                    <i class="fa-solid fa-charging-station me-1 text-info"></i> Electric (EV)
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="vTypeRadio" id="vTypeBike" value="Motorcycle">
+                                <label class="btn btn-outline-secondary w-100 text-start py-2 text-xs" for="vTypeBike">
+                                    <i class="fa-solid fa-motorcycle me-1 text-success"></i> Two-Wheeler
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-info w-100 fw-bold py-2.5 text-dark d-flex align-items-center justify-content-center gap-2">
+                        <i class="fa-solid fa-check-to-slot"></i>
+                        <span>Allot Vacant Bay & Issue Digital Pass</span>
+                    </button>
+                </form>
+
+                <div class="p-3 bg-dark-soft rounded-3 border border-subtle mt-4">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fa-solid fa-circle-info text-info mt-1"></i>
+                        <div class="text-xs text-secondary">
+                            Automated gate cameras scan vehicle plates on entry. Once allotted, follow the on-screen arrows to your assigned bay.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: WAYFINDING & DIRECTIONS -->
+        <div class="col-lg-6">
+            <div class="glass-card p-4 h-100">
+                <div class="d-flex align-items-center gap-2 pb-3 border-bottom border-subtle mb-3">
+                    <i class="fa-solid fa-route text-warning fs-4"></i>
+                    <h5 class="fw-bold text-white mb-0">Gate Wayfinding & Bay Directions</h5>
+                </div>
+
+                <div id="directionsContent">
+                    <div class="p-3 rounded-3 bg-dark-soft border border-subtle mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-white fw-bold">
+                            <i class="fa-solid fa-location-dot text-danger"></i>
+                            <span id="navDestination">Destination: Approach Entry Gate 1</span>
+                        </div>
+                        <p class="text-secondary small mb-0" id="navDescription">
+                            Allot or select your vehicle to view personalized turn-by-turn guidance from Entry Gate 1 to your bay.
+                        </p>
+                    </div>
+
+                    <!-- Step by Step List -->
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        <div class="d-flex gap-3 align-items-start">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; flex-shrink: 0;">1</div>
+                            <div>
+                                <div class="fw-semibold text-white small">Entry Gate 1 Verification</div>
+                                <div class="text-xs text-secondary">Drive slowly past the ALPR camera boom barrier for plate verification.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3 align-items-start">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; flex-shrink: 0;">2</div>
+                            <div>
+                                <div class="fw-semibold text-white small" id="navStep2Title">Follow Main Ramp</div>
+                                <div class="text-xs text-secondary" id="navStep2Desc">Take the ground level inner lane towards Section A or B as indicated on your pass.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3 align-items-start">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; flex-shrink: 0;">3</div>
+                            <div>
+                                <div class="fw-semibold text-white small" id="navStep3Title">Park in Assigned Bay</div>
+                                <div class="text-xs text-secondary" id="navStep3Desc">Locate your marked green bay number and reverse or drive in securely.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Facility Map Schematic -->
+                    <div class="p-3 rounded-3 bg-dark-soft border border-subtle text-center">
+                        <div class="text-xs text-secondary text-uppercase fw-bold mb-2">Parking Layout Schematic</div>
+                        <div class="d-flex justify-content-around py-3 border border-secondary border-dashed rounded-2 bg-dark">
+                            <div class="text-center">
+                                <span class="badge bg-primary mb-1">Gate 1</span>
+                                <div class="text-xs text-secondary">&darr; Entry</div>
+                            </div>
+                            <div class="text-center">
+                                <span class="badge bg-success mb-1">Sec A (Ground)</span>
+                                <div class="text-xs text-secondary">Bays A01 - A06</div>
+                            </div>
+                            <div class="text-center">
+                                <span class="badge bg-warning text-dark mb-1">Sec B (L1 Ramp)</span>
+                                <div class="text-xs text-secondary">Bays B01 - B06</div>
+                            </div>
+                            <div class="text-center">
+                                <span class="badge bg-info text-dark mb-1">Sec C (EV)</span>
+                                <div class="text-xs text-secondary">Bays C01 - C04</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let activePlate = "{{ user.vehicle_plate or 'DL3CAB1234' }}";
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkDriverStatus();
+    setInterval(checkDriverStatus, 10000);
+});
+
+async function checkDriverStatus() {
+    const icon = document.getElementById('driverRefreshIcon');
+    if (icon) icon.classList.add('fa-spin');
+
+    try {
+        // 1. Fetch slots to compute vacancy counters
+        const slotsRes = await fetch('/api/slots');
+        const slotsData = await slotsRes.json();
+
+        if (slotsData.success) {
+            const slots = slotsData.slots;
+            const vacant = slots.filter(s => s.is_occupied === 0);
+            document.getElementById('driverVacantCount').innerText = vacant.length;
+
+            const secA = vacant.filter(s => s.section.includes('Section A')).length;
+            const secB = vacant.filter(s => s.section.includes('Section B')).length;
+            const secC = vacant.filter(s => s.section.includes('Section C')).length;
+
+            document.getElementById('secAVacant').innerText = secA;
+            document.getElementById('secBVacant').innerText = secB;
+            document.getElementById('secCVacant').innerText = secC;
+        }
+
+        // 2. Fetch active ticket for driver plate
+        const ticketRes = await fetch(`/api/driver_ticket/${encodeURIComponent(activePlate)}`);
+        const ticketData = await ticketRes.json();
+
+        const ticketSection = document.getElementById('activeTicketSection');
+        const checkinSection = document.getElementById('checkinFormSection');
+
+        if (ticketData.found && ticketData.ticket) {
+            const t = ticketData.ticket;
+            ticketSection.style.display = 'block';
+            checkinSection.style.display = 'none';
+
+            document.getElementById('ticketPlateDisplay').innerText = t.plate_number;
+            document.getElementById('ticketSlotNumber').innerText = t.slot_number;
+            document.getElementById('ticketSectionName').innerText = t.section;
+            document.getElementById('ticketIdDisplay').innerText = t.ticket_id;
+            document.getElementById('ticketVehicleType').innerText = t.vehicle_type || 'Car';
+            document.getElementById('ticketEntryTime').innerText = t.entry_time;
+            document.getElementById('ticketElapsed').innerText = formatDuration(t.duration_minutes);
+            document.getElementById('ticketFee').innerText = t.estimated_fee;
+
+            updateDirectionsForSlot(t.slot_number, t.section);
+        } else {
+            ticketSection.style.display = 'none';
+            checkinSection.style.display = 'block';
+            resetDirections();
+        }
+    } catch (err) {
+        console.error("Driver check error:", err);
+    } finally {
+        if (icon) icon.classList.remove('fa-spin');
+    }
+}
+
+function updateDirectionsForSlot(slotNumber, section) {
+    document.getElementById('navDestination').innerText = `Destination: Bay ${slotNumber} (${section})`;
+    document.getElementById('navDescription').innerText = `Your vehicle is allotted to ${slotNumber}. Follow the signs to park smoothly.`;
+
+    if (slotNumber.startsWith('A')) {
+        document.getElementById('navStep2Title').innerText = 'Turn Right at Ground Floor Junction';
+        document.getElementById('navStep2Desc').innerText = 'Proceed straight 40 meters. Section A bays are on your right hand side.';
+        document.getElementById('navStep3Desc').innerText = `Park in designated bay ${slotNumber}.`;
+    } else if (slotNumber.startsWith('B')) {
+        document.getElementById('navStep2Title').innerText = 'Ascend Level 1 Ramp';
+        document.getElementById('navStep2Desc').innerText = 'Follow the yellow ramp up to Level 1 and proceed toward the south wing.';
+        document.getElementById('navStep3Desc').innerText = `Locate marked bay ${slotNumber} in Section B.`;
+    } else if (slotNumber.startsWith('C')) {
+        document.getElementById('navStep2Title').innerText = 'Proceed to Priority / EV Station';
+        document.getElementById('navStep2Desc').innerText = 'Turn left immediately after Gate 1 boom barrier. Charging pods are available.';
+        document.getElementById('navStep3Desc').innerText = `Connect or park in bay ${slotNumber}.`;
+    }
+}
+
+function resetDirections() {
+    document.getElementById('navDestination').innerText = 'Destination: Approach Entry Gate 1';
+    document.getElementById('navDescription').innerText = 'Submit your vehicle details to be allotted an optimal vacant parking bay.';
+    document.getElementById('navStep2Title').innerText = 'Follow Main Ramp';
+    document.getElementById('navStep2Desc').innerText = 'Take the ground level inner lane towards Section A or B.';
+    document.getElementById('navStep3Desc').innerText = 'Locate your marked green bay number.';
+}
+
+async function handleDriverCheckin(e) {
+    e.preventDefault();
+    const plate = document.getElementById('driverPlateInput').value.trim();
+    const vType = document.querySelector('input[name="vTypeRadio"]:checked').value;
+
+    if (!plate) {
+        showToast('Please enter your license plate number.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/allot_slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plate_number: plate,
+                vehicle_type: vType,
+                created_by: 'driver'
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            activePlate = plate;
+            showToast(data.message, 'success');
+            checkDriverStatus();
+        } else {
+            showToast(data.message, 'danger');
+        }
+    } catch (err) {
+        showToast('Failed to request slot.', 'danger');
+    }
+}
+
+async function driverSelfCheckout() {
+    if (!confirm(`Request checkout and exit pass for vehicle ${activePlate}?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/release_slot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: activePlate })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Checked out! Total fee: ₹${data.receipt.total_fee}. Exit gate open.`, 'success');
+            checkDriverStatus();
+        } else {
+            showToast(data.message || 'Checkout failed.', 'danger');
+        }
+    } catch (err) {
+        showToast('Error requesting checkout.', 'danger');
+    }
+}
+</script>
+{% endblock %}

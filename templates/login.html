@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Smart Parking Assistant{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+            
+            <!-- Hero Header -->
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-primary-glow mb-3">
+                    <i class="fa-solid fa-car-tunnel fs-1 text-primary"></i>
+                </div>
+                <h1 class="display-6 fw-bold tracking-tight text-white">Smart Parking Assistant</h1>
+                <p class="text-secondary lead fs-6 mx-auto" style="max-width: 540px;">
+                    AI-Powered Automatic License Plate Recognition & Real-Time Parking Bay Allotment System.
+                </p>
+            </div>
+
+            <!-- Role Selector Card -->
+            <div class="glass-card overflow-hidden shadow-2xl border border-subtle">
+                <div class="card-header bg-dark-soft p-0 border-bottom border-subtle">
+                    <ul class="nav nav-pills nav-fill nav-tabs-modern" id="loginRoleTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-3 px-4 d-flex align-items-center justify-content-center gap-2" 
+                                    id="assistant-tab" data-bs-toggle="tab" data-bs-target="#assistant-pane" type="button" role="tab">
+                                <i class="fa-solid fa-id-badge text-warning fs-5"></i>
+                                <div class="text-start">
+                                    <div class="fw-bold">Parking Assistant</div>
+                                    <div class="text-xs text-secondary d-none d-sm-block">Gate Attendant & Lot Manager</div>
+                                </div>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-3 px-4 d-flex align-items-center justify-content-center gap-2" 
+                                    id="driver-tab" data-bs-toggle="tab" data-bs-target="#driver-pane" type="button" role="tab">
+                                <i class="fa-solid fa-car-side text-info fs-5"></i>
+                                <div class="text-start">
+                                    <div class="fw-bold">Vehicle Driver</div>
+                                    <div class="text-xs text-secondary d-none d-sm-block">Self-Service Bay Finder & Pass</div>
+                                </div>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <div class="tab-content" id="loginRoleTabsContent">
+                        
+                        <!-- ================= ASSISTANT PANE ================= -->
+                        <div class="tab-pane fade show active" id="assistant-pane" role="tabpanel">
+                            <div class="row g-4 align-items-center">
+                                <div class="col-md-7">
+                                    <div class="mb-4">
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 mb-2">Staff Portal</span>
+                                        <h3 class="fw-bold text-white mb-1">Attendant Sign In</h3>
+                                        <p class="text-secondary small">Access the gate scanner, camera ALPR capture, vacant bay allotment, and checkout cash desk.</p>
+                                    </div>
+
+                                    {% if error and role == 'assistant' %}
+                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 small" role="alert">
+                                            <i class="fa-solid fa-circle-exclamation"></i>
+                                            <div>{{ error }}</div>
+                                        </div>
+                                    {% endif %}
+
+                                    <form action="/login" method="POST">
+                                        <input type="hidden" name="role" value="assistant">
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label small text-secondary fw-semibold">Staff Username</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-input border-input text-secondary">
+                                                    <i class="fa-solid fa-user"></i>
+                                                </span>
+                                                <input type="text" name="username" class="form-control bg-input border-input text-light" 
+                                                       value="assistant" required placeholder="Enter username">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label class="form-label small text-secondary fw-semibold">Password</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-input border-input text-secondary">
+                                                    <i class="fa-solid fa-lock"></i>
+                                                </span>
+                                                <input type="password" name="password" class="form-control bg-input border-input text-light" 
+                                                       value="admin123" required placeholder="Enter password">
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-warning w-100 fw-bold py-2.5 mb-3 d-flex align-items-center justify-content-center gap-2">
+                                            <span>Sign In to Assistant Dashboard</span>
+                                            <i class="fa-solid fa-arrow-right"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Quick Demo Login Button -->
+                                    <button class="btn btn-outline-warning btn-sm w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                                            onclick="quickAssistantLogin()">
+                                        <i class="fa-solid fa-bolt text-warning"></i>
+                                        <span>1-Click Assistant Demo Login</span>
+                                    </button>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <div class="feature-box p-4 rounded-4 bg-dark-card border border-subtle">
+                                        <h6 class="text-warning text-uppercase fw-bold text-xs tracking-wider mb-3">Assistant Capabilities</h6>
+                                        <ul class="list-unstyled d-flex flex-column gap-3 small text-secondary mb-0">
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-video text-success mt-1"></i>
+                                                <span>Live camera & image upload license plate OCR extraction</span>
+                                            </li>
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-th-large text-primary mt-1"></i>
+                                                <span>Live 2D parking bay grid with vacant/occupied visual indicators</span>
+                                            </li>
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-receipt text-warning mt-1"></i>
+                                                <span>Auto slot allotment & checkout billing receipt calculation</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================= DRIVER PANE ================= -->
+                        <div class="tab-pane fade" id="driver-pane" role="tabpanel">
+                            <div class="row g-4 align-items-center">
+                                <div class="col-md-7">
+                                    <div class="mb-4">
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 mb-2">Driver Portal</span>
+                                        <h3 class="fw-bold text-white mb-1">Driver Entry & Pass</h3>
+                                        <p class="text-secondary small">Check real-time slot availability, request parking allotment, or view your active pass.</p>
+                                    </div>
+
+                                    {% if error and role == 'driver' %}
+                                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 small" role="alert">
+                                            <i class="fa-solid fa-circle-exclamation"></i>
+                                            <div>{{ error }}</div>
+                                        </div>
+                                    {% endif %}
+
+                                    <form action="/login" method="POST">
+                                        <input type="hidden" name="role" value="driver">
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label small text-secondary fw-semibold">Username or Plate Number</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-input border-input text-secondary">
+                                                    <i class="fa-solid fa-car"></i>
+                                                </span>
+                                                <input type="text" name="username" class="form-control bg-input border-input text-light" 
+                                                       value="driver" required placeholder="e.g., driver or DL3CAB1234">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <label class="form-label small text-secondary fw-semibold">Password</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-input border-input text-secondary">
+                                                    <i class="fa-solid fa-lock"></i>
+                                                </span>
+                                                <input type="password" name="password" class="form-control bg-input border-input text-light" 
+                                                       value="driver123" required placeholder="Enter password">
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-info w-100 fw-bold py-2.5 mb-3 d-flex align-items-center justify-content-center gap-2 text-dark">
+                                            <span>Open Driver Dashboard</span>
+                                            <i class="fa-solid fa-arrow-right"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Quick Demo Login Button -->
+                                    <button class="btn btn-outline-info btn-sm w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                                            onclick="quickDriverLogin()">
+                                        <i class="fa-solid fa-bolt text-info"></i>
+                                        <span>1-Click Driver Demo Login</span>
+                                    </button>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <div class="feature-box p-4 rounded-4 bg-dark-card border border-subtle">
+                                        <h6 class="text-info text-uppercase fw-bold text-xs tracking-wider mb-3">Driver Benefits</h6>
+                                        <ul class="list-unstyled d-flex flex-column gap-3 small text-secondary mb-0">
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-magnifying-glass-location text-success mt-1"></i>
+                                                <span>Check live vacant parking bay count before entering</span>
+                                            </li>
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-qrcode text-info mt-1"></i>
+                                                <span>Digital Parking Pass with QR code and allotted bay location</span>
+                                            </li>
+                                            <li class="d-flex align-items-start gap-2">
+                                                <i class="fa-solid fa-route text-warning mt-1"></i>
+                                                <span>Step-by-step turn guidance from Gate 1 to your parked car</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer info -->
+                <div class="card-footer bg-dark-soft text-center py-3 border-top border-subtle small text-secondary">
+                    <span class="me-3"><i class="fa-solid fa-microchip text-primary me-1"></i> YOLOv8 Vehicle & Plate Detect</span>
+                    <span class="me-3"><i class="fa-solid fa-font text-info me-1"></i> EasyOCR Engine</span>
+                    <span><i class="fa-solid fa-shield-check text-success me-1"></i> Dual-Role Access Control</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function quickAssistantLogin() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/login';
+
+    const roleInput = document.createElement('input');
+    roleInput.type = 'hidden';
+    roleInput.name = 'role';
+    roleInput.value = 'assistant';
+    form.appendChild(roleInput);
+
+    const userInput = document.createElement('input');
+    userInput.type = 'hidden';
+    userInput.name = 'username';
+    userInput.value = 'assistant';
+    form.appendChild(userInput);
+
+    const passInput = document.createElement('input');
+    passInput.type = 'hidden';
+    passInput.name = 'password';
+    passInput.value = 'admin123';
+    form.appendChild(passInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function quickDriverLogin() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/login';
+
+    const roleInput = document.createElement('input');
+    roleInput.type = 'hidden';
+    roleInput.name = 'role';
+    roleInput.value = 'driver';
+    form.appendChild(roleInput);
+
+    const userInput = document.createElement('input');
+    userInput.type = 'hidden';
+    userInput.name = 'username';
+    userInput.value = 'driver';
+    form.appendChild(userInput);
+
+    const passInput = document.createElement('input');
+    passInput.type = 'hidden';
+    passInput.name = 'password';
+    passInput.value = 'driver123';
+    form.appendChild(passInput);
+
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

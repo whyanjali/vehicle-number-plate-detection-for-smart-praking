@@ -47,10 +47,31 @@ Because OCR on real-time video can be sporadic and inconsistent between moving f
 
 ## 💻 Running the System
 
-To start the pipeline on your default webcam:
+### 1. Web Application Dashboard (Dual-Role: Assistant & Driver) 🌐
+To start the full Smart Parking Assistant web portal with live ALPR scanner, 2D visual parking bay map, and driver self-service:
 ```bash
-python alpr_pipeline.py
+yolov8_env\Scripts\python.exe app.py
+```
+Open your browser at: **`http://127.0.0.1:5000`**
+
+#### 🔑 Pre-Configured Accounts:
+- **Parking Assistant / Attendant**:
+  - Username: `assistant`
+  - Password: `admin123`
+  *(Includes live gate camera/upload scanner, vacant slot allotment, live 2D grid, vehicle checkout & billing receipts)*
+- **Vehicle Driver**:
+  - Username: `driver` (or enter plate number like `DL3CAB1234`)
+  - Password: `driver123`
+  *(Includes live vacancy finder, digital parking pass with QR code, and turn-by-turn navigation to assigned bay)*
+
+---
+
+### 2. Standalone Terminal Pipeline
+To start the pipeline on your default webcam directly in OpenCV:
+```bash
+yolov8_env\Scripts\python.exe alpr_pipeline.py
 ```
 > *To change to a pre-recorded video stream, update the `video_source` variable in `alpr_pipeline.py`.*
 
-*The `Q` key can be pressed entirely to terminate the real-time webcam session.*
+*The `Q` key can be pressed to terminate the real-time webcam session.*
+
