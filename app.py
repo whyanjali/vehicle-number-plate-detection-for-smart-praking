@@ -169,6 +169,96 @@ def api_capture_plate():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/auto_gate_scan', methods=['POST'])
+def api_auto_gate_scan():
+    """
+    Live Gate Autonomous Endpoint:
+    Analyzes live camera frame. If a valid vehicle plate is detected,
+    it automatically verifies if it's already parked, and if not,
+    automatically allots the nearest vacant slot in atomic transaction!
+    """
+    try:
+        data = request.get_json() or {}
+        image_input = None
+
+        if 'image_b64' in data and data['image_b64']:
+            raw_b64 = data['image_b64']
+            if ',' in raw_b64:
+                raw_b64 = raw_b64.split(',', 1)[1]
+            image_input = base64.b64decode(raw_b64)
+        elif 'sample_name' in data and data['sample_name']:
+            sample_path = alpr_service.get_sample_image_path(data['sample_name'])
+            if not sample_path:
+                return jsonify({'success': False, 'message': 'Sample image not found.'}), 404
+            image_input = sample_path
+        else:
+            return jsonify({'success': False, 'message': 'No image data provided.'}), 400
+
+        # Run ALPR Recognition
+        result = alpr_service.recognize_plate(image_input)
+
+        if not result.get('found') or not result.get('plate_number'):
+            return jsonify({
+                'success': True,
+                'detected': False,
+                'result': result,
+                'message': 'Scanning... No vehicle plate detected.'
+            })
+
+        plate = result['plate_number'].strip().upper()
+        v_type = result.get('vehicle_type', 'Car')
+
+        # Check if already parked
+        conn = database.get_db_connection()
+        existing = conn.execute(
+            "SELECT slot_number FROM parking_slots WHERE current_plate = ? AND is_occupied = 1",
+            (plate,)
+        ).fetchone()
+        conn.close()
+
+        if existing:
+            return jsonify({
+                'success': True,
+                'detected': True,
+                'already_parked': True,
+                'plate_number': plate,
+                'slot_number': existing['slot_number'],
+                'result': result,
+                'message': f"Vehicle {plate} is already parked in Bay {existing['slot_number']}."
+            })
+
+        # Automatically Allot the optimal vacant space!
+        allot_res = database.allot_slot(
+            plate_number=plate,
+            vehicle_type=v_type,
+            created_by='autonomous_gate_ai'
+        )
+
+        if allot_res.get('success'):
+            return jsonify({
+                'success': True,
+                'detected': True,
+                'auto_allotted': True,
+                'plate_number': plate,
+                'slot_number': allot_res['ticket']['slot_number'],
+                'ticket': allot_res['ticket'],
+                'result': result,
+                'message': f"🚀 Auto-Allotted Bay {allot_res['ticket']['slot_number']} to {plate}!"
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'detected': True,
+                'auto_allotted': False,
+                'plate_number': plate,
+                'result': result,
+                'message': allot_res.get('message', 'Parking facility is currently full.')
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/allot_slot', methods=['POST'])
 def api_allot_slot():
     try:

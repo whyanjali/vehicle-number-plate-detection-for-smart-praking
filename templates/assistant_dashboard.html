@@ -100,6 +100,25 @@
                     <span class="badge bg-primary text-xs">YOLOv8 + OCR</span>
                 </div>
 
+                <!-- Autonomous Auto-Allot Toggle -->
+                <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 bg-dark-soft border border-primary border-opacity-50 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="autoAllotSwitch" checked onchange="toggleAutoAllotMode(this.checked)" style="cursor: pointer;">
+                        </div>
+                        <div>
+                            <div class="fw-bold text-white text-xs d-flex align-items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-warning"></i>
+                                <span>Autonomous Gate AI (Auto-Capture & Allot)</span>
+                            </div>
+                            <div class="text-xs text-secondary">Automatically locks plate and assigns vacant bay</div>
+                        </div>
+                    </div>
+                    <span id="autoScanBadge" class="badge bg-success text-dark text-xs fw-bold px-2 py-1">
+                        <i class="fa-solid fa-robot me-1"></i> ACTIVE
+                    </span>
+                </div>
+
                 <!-- Input Method Tabs -->
                 <ul class="nav nav-pills nav-fill mb-3 bg-dark-soft p-1 rounded-3 border border-subtle small" id="scannerTabs" role="tablist">
                     <li class="nav-item">
@@ -114,7 +133,7 @@
                     </li>
                     <li class="nav-item">
                         <button class="nav-link py-1.5" id="samples-tab" data-bs-toggle="pill" data-bs-target="#samples-pane" type="button">
-                            <i class="fa-solid fa-images me-1"></i> Test Presets
+                            <i class="fa-solid fa-images me-1"></i> Test Presets & Sim
                         </button>
                     </li>
                 </ul>
@@ -123,21 +142,40 @@
                     
                     <!-- TAB 1: Live Webcam -->
                     <div class="tab-pane fade show active" id="webcam-pane">
-                        <div class="scanner-viewport mb-3">
+                        <div class="scanner-viewport mb-3" style="position: relative;">
                             <video id="webcamVideo" class="scanner-video" autoplay playsinline muted></video>
-                            <div class="scanner-reticle" id="scannerReticle"></div>
+                            
+                            <!-- Scanner Reticle with Moving Laser -->
+                            <div class="scanner-reticle" id="scannerReticle">
+                                <div class="scanner-laser" id="scannerLaser" style="display: none;"></div>
+                            </div>
+
+                            <!-- Live Detection HUD Banner -->
+                            <div id="liveDetectionHUD" class="live-hud-banner text-center" style="display: none;">
+                                <div class="hud-pill animate-bounce">
+                                    <i class="fa-solid fa-circle-check fs-5 text-warning"></i>
+                                    <span id="hudMessage">Auto-Allotted Bay A-02 to HR26BR9044!</span>
+                                </div>
+                            </div>
+
+                            <!-- Scanning Status Pill -->
+                            <div id="scannerStatusPill" class="position-absolute bottom-0 start-0 m-2 px-2 py-1 rounded-pill bg-dark bg-opacity-75 text-xs text-white border border-subtle" style="display: none; z-index: 15;">
+                                <i class="fa-solid fa-circle-dot text-success fa-fade me-1"></i>
+                                <span id="scannerStatusText">Watching for vehicles...</span>
+                            </div>
+
                             <div id="cameraPlaceholder" class="position-absolute text-center p-3">
                                 <i class="fa-solid fa-camera-rotate fs-1 text-secondary mb-2"></i>
-                                <div class="small text-secondary">Camera is inactive. Click below to start video feed.</div>
+                                <div class="small text-secondary">Camera is inactive. Click below to start live video feed.</div>
                             </div>
                         </div>
 
                         <div class="d-flex gap-2">
-                            <button id="btnStartCamera" class="btn btn-outline-primary btn-sm flex-fill" onclick="toggleWebcam()">
-                                <i class="fa-solid fa-power-off me-1"></i> <span id="cameraBtnText">Start Camera</span>
+                            <button id="btnStartCamera" class="btn btn-outline-primary btn-sm flex-fill fw-bold" onclick="toggleWebcam()">
+                                <i class="fa-solid fa-power-off me-1"></i> <span id="cameraBtnText">Start Live Camera</span>
                             </button>
                             <button id="btnSnapPlate" class="btn btn-primary btn-sm flex-fill fw-bold" onclick="captureAndScan()" disabled>
-                                <i class="fa-solid fa-expand me-1"></i> Snap & Detect Plate
+                                <i class="fa-solid fa-expand me-1"></i> Manual Snap & Detect
                             </button>
                         </div>
                     </div>
@@ -156,20 +194,35 @@
                         </button>
                     </div>
 
-                    <!-- TAB 3: Dataset Sample Images -->
+                    <!-- TAB 3: Dataset Sample Images & Auto-Simulation -->
                     <div class="tab-pane fade" id="samples-pane">
+                        <div class="p-3 bg-dark-soft rounded-3 border border-subtle mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold text-white small"><i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Autonomous Ingress Simulation</span>
+                                <span class="badge bg-warning-subtle text-warning text-xs">Demo Mode</span>
+                            </div>
+                            <p class="text-secondary text-xs mb-3">
+                                Automatically streams incoming vehicles through Gate 1. AI detects plates and allots vacant bays in real-time.
+                            </p>
+                            <button class="btn btn-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-2" id="btnSimulate" onclick="toggleGateSimulation()">
+                                <i class="fa-solid fa-play" id="simIcon"></i>
+                                <span id="simBtnText">Start Auto-Ingress Simulation</span>
+                            </button>
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label text-secondary small fw-semibold">Select Test Vehicle from Project Dataset:</label>
-                            <select id="sampleImageSelect" class="form-select form-select-sm bg-input border-input text-white" onchange="previewSampleImage()">
+                            <label class="form-label text-secondary small fw-semibold">Or Select Single Test Vehicle:</label>
+                            <select id="sampleImageSelect" class="form-select form-select-sm bg-input border-input text-white">
                                 <option value="">-- Choose a test image --</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="scanSelectedSample()">
-                            <i class="fa-solid fa-bolt me-1"></i> Scan Selected Test Image
+                        <button class="btn btn-outline-primary btn-sm w-100 fw-bold" onclick="scanSelectedSample()">
+                            <i class="fa-solid fa-bolt me-1"></i> Scan Selected Image
                         </button>
                     </div>
 
                 </div>
+
 
                 <!-- Recognition Result Panel -->
                 <div id="recognitionResultCard" class="p-3 rounded-3 bg-dark-soft border border-subtle mt-3" style="display: none;">
@@ -592,28 +645,247 @@ function filterTable() {
     });
 }
 
-// Webcam Controls
+// Autonomous Gate & Auto-Allot State
+let autoAllotEnabled = true;
+let autoScanInterval = null;
+let isProcessingAutoFrame = false;
+let autoSimInterval = null;
+let isSimulating = false;
+let cooldownPlates = new Set();
+let sampleList = [];
+
+// Audio Synthesizer: Two-tone Success Chime
+function playSuccessChime() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.45);
+    } catch(e) {
+        console.warn("Audio chime note:", e);
+    }
+}
+
+// Show animated HUD message on camera
+function showLiveHUD(message, duration = 4000) {
+    const hud = document.getElementById('liveDetectionHUD');
+    const msg = document.getElementById('hudMessage');
+    if (!hud || !msg) return;
+    msg.innerHTML = message;
+    hud.style.display = 'block';
+    setTimeout(() => {
+        hud.style.display = 'none';
+    }, duration);
+}
+
+function toggleAutoAllotMode(enabled) {
+    autoAllotEnabled = enabled;
+    const badge = document.getElementById('autoScanBadge');
+    if (badge) {
+        if (enabled) {
+            badge.className = "badge bg-success text-dark text-xs fw-bold px-2 py-1";
+            badge.innerHTML = '<i class="fa-solid fa-robot me-1"></i> ACTIVE';
+            showToast('Autonomous Gate AI enabled. Incoming vehicles will be auto-allotted.', 'success');
+        } else {
+            badge.className = "badge bg-secondary text-xs fw-bold px-2 py-1";
+            badge.innerHTML = '<i class="fa-solid fa-pause me-1"></i> PAUSED';
+            showToast('Autonomous Gate AI paused. Switched to manual mode.', 'warning');
+        }
+    }
+}
+
+// Webcam Controls & Autonomous Loop
 async function toggleWebcam() {
     const btnText = document.getElementById('cameraBtnText');
     const snapBtn = document.getElementById('btnSnapPlate');
     const placeholder = document.getElementById('cameraPlaceholder');
+    const laser = document.getElementById('scannerLaser');
+    const statusPill = document.getElementById('scannerStatusPill');
 
     if (!cameraManager.isActive) {
         const ok = await cameraManager.start();
         if (ok) {
-            btnText.innerText = 'Stop Camera';
+            btnText.innerText = 'Stop Live Camera';
             snapBtn.disabled = false;
             placeholder.style.display = 'none';
-            showToast('Webcam started.', 'success');
+            if (laser) laser.style.display = 'block';
+            if (statusPill) statusPill.style.display = 'block';
+            showToast('Live camera active. Autonomous gate scanner started.', 'success');
+
+            // Start autonomous detection loop
+            startAutoScanLoop();
         } else {
-            showToast('Could not access webcam. Please check device permissions.', 'danger');
+            showToast('Could not access camera. Please verify device permissions.', 'danger');
         }
     } else {
+        stopAutoScanLoop();
         cameraManager.stop();
-        btnText.innerText = 'Start Camera';
+        btnText.innerText = 'Start Live Camera';
         snapBtn.disabled = true;
         placeholder.style.display = 'block';
+        if (laser) laser.style.display = 'none';
+        if (statusPill) statusPill.style.display = 'none';
     }
+}
+
+function startAutoScanLoop() {
+    stopAutoScanLoop();
+    // Analyze frame every 1.8 seconds
+    autoScanInterval = setInterval(async () => {
+        if (!cameraManager.isActive || isProcessingAutoFrame || !autoAllotEnabled) {
+            return;
+        }
+
+        const b64 = cameraManager.captureBlob();
+        if (!b64) return;
+
+        isProcessingAutoFrame = true;
+        const statusText = document.getElementById('scannerStatusText');
+        if (statusText) statusText.innerText = "Analyzing live frame...";
+
+        try {
+            const res = await fetch('/api/auto_gate_scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_b64: b64 })
+            });
+
+            const data = await res.json();
+
+            if (data.success && data.detected) {
+                const plate = data.plate_number;
+
+                if (data.auto_allotted) {
+                    if (!cooldownPlates.has(plate)) {
+                        cooldownPlates.add(plate);
+                        setTimeout(() => cooldownPlates.delete(plate), 20000); // 20s cooldown
+
+                        playSuccessChime();
+                        showLiveHUD(`🚀 Auto-Allotted <b>Bay ${data.slot_number}</b> to <b>${plate}</b>!`);
+                        showToast(`⚡ Vehicle ${plate} detected! Auto-allotted to Bay ${data.slot_number}`, 'success');
+
+                        // Show preview card
+                        displayDetectionResult(data.result);
+                        refreshDashboard();
+                    }
+                } else if (data.already_parked) {
+                    if (!cooldownPlates.has(plate)) {
+                        cooldownPlates.add(plate);
+                        setTimeout(() => cooldownPlates.delete(plate), 15000);
+                        showLiveHUD(`ℹ️ Vehicle <b>${plate}</b> already parked in <b>Bay ${data.slot_number}</b>`);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn("Auto-scan error:", err);
+        } finally {
+            isProcessingAutoFrame = false;
+            if (statusText) statusText.innerText = "Watching for vehicles...";
+        }
+    }, 1800);
+}
+
+function stopAutoScanLoop() {
+    if (autoScanInterval) {
+        clearInterval(autoScanInterval);
+        autoScanInterval = null;
+    }
+    isProcessingAutoFrame = false;
+}
+
+// Gate Ingress Simulation (Demo Mode)
+async function toggleGateSimulation() {
+    const btnText = document.getElementById('simBtnText');
+    const simIcon = document.getElementById('simIcon');
+    const btnSim = document.getElementById('btnSimulate');
+
+    if (isSimulating) {
+        // Stop Simulation
+        clearInterval(autoSimInterval);
+        autoSimInterval = null;
+        isSimulating = false;
+        btnText.innerText = "Start Auto-Ingress Simulation";
+        simIcon.className = "fa-solid fa-play";
+        btnSim.className = "btn btn-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-2";
+        showToast("Simulation stopped.", "info");
+        return;
+    }
+
+    if (!sampleList || sampleList.length === 0) {
+        showToast("Loading sample vehicles...", "info");
+        await loadSampleImages();
+    }
+
+    if (sampleList.length === 0) {
+        showToast("No sample vehicles found in dataset.", "danger");
+        return;
+    }
+
+    isSimulating = true;
+    btnText.innerText = "Stop Simulation (Running...)";
+    simIcon.className = "fa-solid fa-square text-danger fa-beat";
+    btnSim.className = "btn btn-danger btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-2";
+    showToast("⚡ Autonomous Gate Simulation Started! Cars arriving at Gate 1...", "success");
+
+    let idx = 0;
+    // Process first vehicle immediately
+    await processSimVehicle(sampleList[idx % sampleList.length]);
+
+    // Stream vehicles every 3.5 seconds
+    autoSimInterval = setInterval(async () => {
+        if (!isSimulating) return;
+        idx++;
+        await processSimVehicle(sampleList[idx % sampleList.length]);
+    }, 3500);
+}
+
+async function processSimVehicle(sampleName) {
+    try {
+        const res = await fetch('/api/auto_gate_scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sample_name: sampleName })
+        });
+
+        const data = await res.json();
+        if (data.success && data.detected) {
+            displayDetectionResult(data.result);
+
+            if (data.auto_allotted) {
+                playSuccessChime();
+                showLiveHUD(`⚡ Auto-Allotted <b>Bay ${data.slot_number}</b> to <b>${data.plate_number}</b>!`);
+                showToast(`Vehicle ${data.plate_number} entered Gate 1 ➔ Assigned Bay ${data.slot_number}!`, 'success');
+                refreshDashboard();
+            } else if (data.already_parked) {
+                showToast(`Vehicle ${data.plate_number} is already in Bay ${data.slot_number}`, 'warning');
+            } else {
+                showToast(data.message, 'warning');
+            }
+        }
+    } catch(err) {
+        console.error("Simulation error:", err);
+    }
+}
+
+function displayDetectionResult(r) {
+    const resultCard = document.getElementById('recognitionResultCard');
+    if (!resultCard || !r) return;
+    resultCard.style.display = 'block';
+    document.getElementById('recPreviewImg').src = r.annotated_image || '';
+    document.getElementById('recPlateNumber').value = r.plate_number || 'UNKNOWN';
+    document.getElementById('recVehicleType').innerText = r.vehicle_type || 'Car';
+    document.getElementById('recConfidence').innerText = `Conf: ${Math.round((r.confidence || 0.85) * 100)}%`;
 }
 
 async function captureAndScan() {
@@ -624,6 +896,7 @@ async function captureAndScan() {
     }
     await processALPR({ image_b64: b64 });
 }
+
 
 // File Upload Handler
 function handleFileSelect(e) {
@@ -649,7 +922,11 @@ async function loadSampleImages() {
         const res = await fetch('/api/sample_images');
         const data = await res.json();
         const sel = document.getElementById('sampleImageSelect');
+        if (data.samples) {
+            sampleList = data.samples;
+        }
         if (sel && data.samples) {
+            sel.innerHTML = '<option value="">-- Choose a test image --</option>';
             data.samples.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s;
